@@ -122,25 +122,14 @@ glm::mat4 Maths::translate(const glm::vec3 &translation) {
 }
 
 glm::mat4 Maths::transpose(const glm::mat4& in) {
-    glm::mat4 output = glm::mat4(0.0f);
+    glm::mat4 out = glm::mat4(0.0f);
 
-    output[0][1] = in[1][0];
-    output[0][2] = in[2][0];
-    output[0][3] = in[3][0];
+    out[0][0] = in[0][0]; out[0][1] = in[1][0]; out[0][2] = in[2][0]; out[0][3] = in[3][0];
+    out[1][0] = in[0][1]; out[1][1] = in[1][1]; out[1][2] = in[2][1]; out[1][3] = in[3][1];
+    out[2][0] = in[0][2]; out[2][1] = in[1][2]; out[2][2] = in[2][2]; out[2][3] = in[3][2];
+    out[3][0] = in[0][3]; out[3][1] = in[1][3]; out[3][2] = in[2][3]; out[3][3] = in[3][3];
 
-    output[1][0] = in[0][1];
-    output[1][2] = in[2][1];
-    output[1][3] = in[3][1];
-
-    output[2][0] = in[0][2];
-    output[2][1] = in[1][2];
-    output[2][3] = in[3][2];
-
-    output[3][0] = in[0][3];
-    output[3][1] = in[1][3];
-    output[3][2] = in[2][3];
-
-    return output;
+    return out;
 }
 
 float Maths::yaw(const glm::vec3& angles) {

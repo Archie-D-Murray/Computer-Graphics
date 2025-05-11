@@ -22,7 +22,7 @@ void Camera::lookAt(const glm::vec3 point) {
 void Camera::quaternionCamera(float dt) {
     Quaternion orientation = Quaternion(pitch, -yaw);
     // orientation = Quaternion::slerp(orientation, rotation, dt * 12.0f);
-    view = glm::transpose(orientation.matrix()) * Maths::translate(-position);
+    view = Maths::transpose(orientation.matrix()) * Maths::translate(-position);
     projection = Maths::perspective(fov, aspect, near, far);
 
     right   =  glm::vec3(view[0][0], view[1][0], view[2][0]);
