@@ -45,6 +45,7 @@ add_executable(Computer_Graphics_Coursework
 	source/fragmentShader.glsl
 
 	common/shader.hpp
+	common/box_collider2d.cpp
 	common/object.cpp
 	common/shader.cpp
 	common/texture.hpp

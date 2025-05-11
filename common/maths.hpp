@@ -32,6 +32,7 @@ namespace Maths {
 
     glm::mat4 lookAt(glm::vec3 position, glm::vec3 target, glm::vec3 worldUp);
     glm::mat4 perspective(float fov, float aspect, float near, float far);
+    glm::mat4 transpose(const glm::mat4& in);
 
     float yaw(const glm::vec3& angles);
     float pitch(const glm::vec3& angles);

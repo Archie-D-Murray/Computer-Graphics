@@ -16,9 +16,11 @@ public:
     glm::vec3 up;
     glm::vec3 right;
     glm::vec3 forward;
-    float yaw = Maths::radians(-90.0f);
+    float yaw = 0;
     float pitch = 0;
     float roll = 0;
+
+    glm::vec3 tint = glm::vec3(1.0f);
 
     Quaternion orientation;
 

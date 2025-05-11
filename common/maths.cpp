@@ -1,6 +1,9 @@
 #include "maths.hpp"
+#include "glm/fwd.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/quaternion.hpp"
 #include <glm/geometric.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 Quaternion::Quaternion() : w(1), x(0), y(0), z(0) {}
 Quaternion::Quaternion(float w, float x, float y, float z) :
@@ -35,22 +38,32 @@ Quaternion::Quaternion(float pitch, float yaw) {
 }
 
 glm::mat4 Quaternion::matrix() {
-    float s = 2.0f / (w * w + x * x + y * y + z * z);
-    float xs = x * s,  ys = y * s,  zs = z * s;
-    float xx = x * xs, xy = x * ys, xz = x * zs;
-    float yy = y * ys, yz = y * zs, zz = z * zs;
-    float xw = w * xs, yw = w * ys, zw = w * zs;
+    // float s = 2.0f / (w * w + x * x + y * y + z * z);
+    // float xs = x * s,  ys = y * s,  zs = z * s;
+    // float xx = x * xs, xy = x * ys, xz = x * zs;
+    // float yy = y * ys, yz = y * zs, zz = z * zs;
+    // float xw = w * xs, yw = w * ys, zw = w * zs;
 
     glm::mat4 rotate = glm::mat4(1.0f);
-    rotate[0][0] = 1.0f - (yy + zz);
-    rotate[0][1] = xy + zw;
-    rotate[0][2] = xz - yw;
-    rotate[1][0] = xy - zw;
-    rotate[1][1] = 1.0f - (xx + zz);
-    rotate[1][2] = yz + xw;
-    rotate[2][0] = xz + yw;
-    rotate[2][1] = yz - xw;
-    rotate[2][2] = 1.0f - (xx + yy);
+    rotate[0][0] = (w * w) + (x * x) - (y * y) - (z * z);
+    rotate[0][1] = (2 * x * y) + (2 * w * z);
+    rotate[0][2] = (2 * x * z) - (2 * w * y);
+    rotate[0][3] = 0.0f;
+
+    rotate[1][0] = (2 * x * y) - (2 * w * z);
+    rotate[1][1] = (w * w) - (x * x) + (y * y) - (z * z);
+    rotate[1][2] = (2 * y * z) + (2 * w * x);
+    rotate[1][3] = 0.0f;
+
+    rotate[2][0] = (2 * x * z) + (2 * w * y);
+    rotate[2][1] = (2 * y * z) - (2 * w * x);
+    rotate[2][2] = (w * w) - (x * x) - (y * y) + (z * z);
+    rotate[2][3] = 0.0f;
+
+    rotate[3][0] = 0.0f;
+    rotate[3][1] = 0.0f;
+    rotate[3][2] = 0.0f;
+    rotate[3][3] = 1.0f;
     return rotate;
 }
 
@@ -106,6 +119,28 @@ glm::mat4 Maths::translate(const glm::vec3 &translation) {
     translateMat[3][1] = translation.y;
     translateMat[3][2] = translation.z;
     return translateMat;
+}
+
+glm::mat4 Maths::transpose(const glm::mat4& in) {
+    glm::mat4 output = glm::mat4(0.0f);
+
+    output[0][1] = in[1][0];
+    output[0][2] = in[2][0];
+    output[0][3] = in[3][0];
+
+    output[1][0] = in[0][1];
+    output[1][2] = in[2][1];
+    output[1][3] = in[3][1];
+
+    output[2][0] = in[0][2];
+    output[2][1] = in[1][2];
+    output[2][3] = in[3][2];
+
+    output[3][0] = in[0][3];
+    output[3][1] = in[1][3];
+    output[3][2] = in[2][3];
+
+    return output;
 }
 
 float Maths::yaw(const glm::vec3& angles) {

@@ -278,11 +278,15 @@ void Model::calculateNormals() {
     for (size_t i = 0; i < vertices.size(); i += 3) {
         glm::vec3 e1 = vertices[i + 1] - vertices[i + 0];
         glm::vec3 e2 = vertices[i + 2] - vertices[i + 1];
-        glm::vec2 dU = { uvs[i + 1].x - uvs[i + 0].x , uvs[i + 1].y - uvs[i + 0].y };
-        glm::vec2 dV = { uvs[i + 2].x - uvs[i + 1].x , uvs[i + 2].y - uvs[i + 1].y };
-        float denom = 1.0f / (dU.x * dV.y - dU.y * dV.x);
-        glm::vec3 tangent = (dV.y * e1 - dV.x * e2) * denom;
-        glm::vec3 bitangent = (dU.x * e2 - dU.y * e1) * denom;
+        glm::vec2 dU = { uvs[i + 1].x - uvs[i + 0].x , uvs[i + 2].x - uvs[i + 1].x };
+        glm::vec2 dV = { uvs[i + 1].y - uvs[i + 0].y , uvs[i + 2].y - uvs[i + 1].y };
+
+        glm::vec2 currDelta = { uvs[i + 1].x - uvs[i + 0].x, uvs[i + 1].y - uvs[i + 0].y };
+        glm::vec2 nextDelta = { uvs[i + 2].x - uvs[i + 1].x, uvs[i + 2].y - uvs[i + 1].y };
+
+        float denom = 1.0f / (currDelta.x * nextDelta.y - nextDelta.x * currDelta.y);
+        glm::vec3 tangent = (nextDelta.y * e1 - currDelta.y * e2) * denom;
+        glm::vec3 bitangent = (currDelta.x * e2 - nextDelta.x * e1) * denom;
 
         tangents.push_back(tangent);
         tangents.push_back(tangent);
