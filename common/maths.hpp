@@ -42,6 +42,7 @@ namespace Maths {
     float magnitude(const glm::vec3& vector);
     float sqrMagnitude(const glm::vec3& vector);
     float dot(const glm::vec3& a, const glm::vec3& b);
+    float dot(const glm::vec2& a, const glm::vec2& b);
     glm::vec3 cross(const glm::vec3& a, const glm::vec3& b);
     glm::vec3 normalize(const glm::vec3& vector);
     bool inRange(const glm::vec3& centre, const glm::vec3& point, float distance);
@@ -53,4 +54,8 @@ namespace Maths {
 
     // Quaternion Maths:
     Quaternion lookDirection(const glm::vec3& forward, const glm::vec3& up);
+
+    // Colour:
+    float hueToRGB(float p, float q, float t);
+    glm::vec3 hslToRGB(glm::vec3 hsl);
 }

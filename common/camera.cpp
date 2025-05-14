@@ -13,9 +13,10 @@ Camera::Camera(const glm::vec3 position, const glm::vec3 target) :
 
 void Camera::lookAt(const glm::vec3 point) {
     glm::vec3 dir = Maths::normalize(point - position);
-    pitch = asinf(-dir.y);
+    pitch = -asinf(-dir.y);
     yaw = atan2f(dir.x, -dir.z);
-    orientation = Quaternion(-pitch, yaw);
+
+    orientation = Quaternion(pitch, -yaw);
     quaternionCamera(1.0f);
 }
 

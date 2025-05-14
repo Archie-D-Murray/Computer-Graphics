@@ -12,6 +12,7 @@ public:
   Quaternion rotation;
   std::string name = "Object";
   Model* model = nullptr;
+  glm::vec3 tint = glm::vec3(1.0f);
 
   Object(const glm::vec3& position, const glm::vec3& scale, const Quaternion& rotation, const char* name, Model* model);
 

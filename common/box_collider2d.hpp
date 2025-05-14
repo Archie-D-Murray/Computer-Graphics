@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <iostream>
 
 constexpr float MIN_DOT_PRODUCT = 0.5f;
 
@@ -18,3 +19,5 @@ public:
     inline float right() const;
     inline float left() const;
 };
+
+std::ostream& operator<<(std::ostream& os, const BoxCollider2D& box);

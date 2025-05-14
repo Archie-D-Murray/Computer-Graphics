@@ -212,7 +212,11 @@ glm::vec3 Maths::cross(const glm::vec3& a, const glm::vec3& b) {
 }
 
 float Maths::dot(const glm::vec3& a, const glm::vec3& b) {
-    return (a.x * b.x + a.y * b.y + a.z + b.z) / magnitude(a) * magnitude(b);
+    return (a.x * b.x + a.y * b.y + a.z * b.z) / magnitude(a) * magnitude(b);
+}
+
+float Maths::dot(const glm::vec2& a, const glm::vec2& b) {
+    return (a.x * b.x + a.y * b.y) / magnitude(a) * magnitude(b);
 }
 
 bool Maths::inRange(const glm::vec3& centre, const glm::vec3& point, float distance) {
@@ -225,4 +229,34 @@ Quaternion Maths::lookDirection(const glm::vec3& forward, const glm::vec3& up) {
     float yaw = atan2f(dir.x, -dir.z);
 
     return Quaternion(pitch, yaw);
+}
+
+float Maths::hueToRGB(float p, float q, float t) {
+    if (t < 0.0f)
+        t += 1.0f;
+    if (t > 1.0f)
+        t -= 1.0f;
+    if (t < 1.0f/6.0f)
+        return p + (q - p) * 6.0f * t;
+    if (t < 1.0f/2.0f)
+        return q;
+    if (t < 2.0f/3.0f)
+        return p + (q - p) * (2.0f/3.0f - t) * 6.0f;
+    return p;
+}
+
+glm::vec3 Maths::hslToRGB(glm::vec3 hsl) {
+    float r, g, b;
+
+    if (hsl.x == 0.0f) {
+        r = g = b = hsl.z; // achromatic
+    } else {
+        float q = hsl.x < 0.5f ? hsl.x * (1 + hsl.y) : hsl.x + hsl.y - hsl.x * hsl.y;
+        float p = 2 * hsl.x - q;
+        r = hueToRGB(p, q, hsl.x + 1.0f/3.0f);
+        g = hueToRGB(p, q, hsl.x);
+        b = hueToRGB(p, q, hsl.x - 1.0f/3.0f);
+    }
+
+    return glm::vec3(r, g, b);
 }

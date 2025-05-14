@@ -54,3 +54,6 @@ target_link_libraries(GLEW_1130
 	${OPENGL_LIBRARY}
 	${EXTRA_LIBS}
 )
+
+add_subdirectory(freetype-2.13.3)
+find_package(Freetype PATHS ./freetype-2.13.3/)

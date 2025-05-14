@@ -25,6 +25,7 @@ struct Light
 };
 
 // Uniforms
+uniform vec3 modelTint = vec3(1);
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
 uniform sampler2D specularMap;
@@ -72,7 +73,7 @@ void main() {
         if (lightSources[i].type == 3)
             fragmentColour += directionalLight(lightDirection, lightColour);
     }
-    fragmentColour *= tint;
+    fragmentColour *= tint * modelTint;
 }
 
 // Calculate point light
@@ -106,9 +107,7 @@ vec3 pointLight(vec3 lightPosition, vec3 lightColour, float constant, float line
 }
 
 // Calculate spotlight
-vec3 spotLight(vec3 lightPosition, vec3 lightDirection, vec3 lightColour,
-    float cosPhi, float constant, float linear, float quadratic)
-{
+vec3 spotLight(vec3 lightPosition, vec3 lightDirection, vec3 lightColour, float cosPhi, float constant, float linear, float quadratic) {
     // Object colour
     vec3 objectColour = vec3(texture(diffuseMap, UV));
 
@@ -144,8 +143,7 @@ vec3 spotLight(vec3 lightPosition, vec3 lightDirection, vec3 lightColour,
 }
 
 // Calculate directional light
-vec3 directionalLight(vec3 lightDirection, vec3 lightColour)
-{
+vec3 directionalLight(vec3 lightDirection, vec3 lightColour) {
     // Object colour
     vec3 objectColour = vec3(texture(diffuseMap, UV));
 
