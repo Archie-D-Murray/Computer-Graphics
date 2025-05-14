@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vector>
 #include <stdio.h>
 #include <string>
@@ -38,6 +37,8 @@ public:
     
     // Cleanup
     void deleteBuffers();
+    void setDiffusionParameters(glm::vec4 params);
+    void setDiffusionParameters(float ka, float kd, float ks, float ns);
     
 private:
     
@@ -62,4 +63,9 @@ private:
     
     // Load texture
     unsigned int loadTexture(const char *path);
+
+    //! Sets KA, KD, KS and NS
+    ///
+    /// @param params packed ka, kd, ks & ns
+    /// 
 };

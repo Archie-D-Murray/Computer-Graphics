@@ -296,3 +296,17 @@ void Model::calculateNormals() {
         bitangents.push_back(bitangent);
     }
 }
+
+void Model::setDiffusionParameters(glm::vec4 params) {
+    ka = params.x;
+    kd = params.y;
+    ks = params.z;
+    Ns = params.w;
+}
+
+void Model::setDiffusionParameters(float ka, float kd, float ks, float Ns) {
+    this->ka = ka;
+    this->kd = kd;
+    this->ks = ks;
+    this->Ns = Ns;
+}

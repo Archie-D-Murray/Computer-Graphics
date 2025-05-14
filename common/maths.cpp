@@ -1,7 +1,6 @@
 #include "maths.hpp"
-#include "glm/fwd.hpp"
+#include <cmath>
 #include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/quaternion.hpp"
 #include <glm/geometric.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -259,4 +258,8 @@ glm::vec3 Maths::hslToRGB(glm::vec3 hsl) {
     }
 
     return glm::vec3(r, g, b);
+}
+
+float Maths::clamp(float min, float max, float value) {
+    return fmaxf(fminf(max, value), min);
 }

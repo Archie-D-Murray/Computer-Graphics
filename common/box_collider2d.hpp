@@ -1,4 +1,5 @@
 #pragma once
+#include "glm/detail/type_vec.hpp"
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <iostream>
@@ -14,10 +15,12 @@ public:
     void updatePosition(const glm::vec3& newPosition);
     static bool isTouching(const BoxCollider2D& a, const BoxCollider2D& b);
 
-    inline float front() const;
-    inline float back() const;
-    inline float right() const;
-    inline float left() const;
+    float front() const;
+    float back() const;
+    float right() const;
+    float left() const;
+
+    glm::vec2 getClosestPoint(const glm::vec2& point) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const BoxCollider2D& box);

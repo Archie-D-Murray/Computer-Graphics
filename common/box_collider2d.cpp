@@ -1,5 +1,6 @@
 #include "box_collider2d.hpp"
 #include <iostream>
+#include "maths.hpp"
 
 BoxCollider2D::BoxCollider2D(const glm::vec3& position, const glm::vec2& size) :
     position(position),
@@ -70,4 +71,9 @@ std::ostream& operator<<(std::ostream& os, const BoxCollider2D& box) {
        << "    Front: " << box.front() << "\n"
        << "}";
     return os;
+}
+
+
+glm::vec2 BoxCollider2D::getClosestPoint(const glm::vec2& point) const {
+    return glm::vec2(Maths::clamp(left(), right(), point.x), Maths::clamp(back(), front(), point.y));
 }

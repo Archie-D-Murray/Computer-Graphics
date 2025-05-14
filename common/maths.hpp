@@ -37,6 +37,7 @@ namespace Maths {
     float yaw(const glm::vec3& angles);
     float pitch(const glm::vec3& angles);
     float roll(const glm::vec3& angles);
+    float clamp(float min, float max, float value);
 
     // Vector3 maths
     float magnitude(const glm::vec3& vector);
