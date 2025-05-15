@@ -182,6 +182,19 @@ glm::mat4 Maths::perspective(float fov, float aspect, float near, float far) {
     return perspective;
 }
 
+glm::mat4 Maths::ortho(float left, float right, float bottom, float top, float near, float far) {
+    glm::mat4 projection = glm::mat4(0.0f);
+
+    projection[0][0] = 2.0f / (right - left);
+    projection[3][0] = -(right + left) / (right - left);
+    projection[1][1] = 2.0f / (top - bottom);
+    projection[3][1] = -(top + bottom) / (top - bottom);
+    projection[2][2] = 2.0f / (near - far);
+    projection[2][2] = (near + far) / (near - far);
+    projection[3][3] = 1.0f;
+    return projection;
+}
+
 float Maths::magnitude(const glm::vec3& vector) {
     return sqrtf(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
 }

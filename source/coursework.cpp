@@ -389,7 +389,6 @@ int main(void) {
       object.draw(shaderID);
     }
 
-    #if 1
     for (BoxCollider2D& collider : colliders) {
       glm::mat4 model = Maths::translate(collider.position) * glm::mat4(1.0f) * Maths::scale(glm::vec3(collider.size.x, 1, collider.size.y));
       glm::mat4 mv = currentCamera().view * model;
@@ -400,7 +399,6 @@ int main(void) {
 
       colliderDebug.draw(shaderID);
     }
-    #endif
 
     if (camera != FPS) {
       // TODO: Draw player when not in FPS
@@ -410,7 +408,7 @@ int main(void) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    const glm::mat4 textProjection = glm::ortho(0.0f, width, 0.0f, height);
+    const glm::mat4 textProjection = Maths::ortho(0.0f, width, 0.0f, height, 0.0f, 10.0f);
     glUseProgram(textShaderID);
     glUniformMatrix4fv(glGetUniformLocation(textShaderID, "projection"), 1,
                        GL_FALSE, glm::value_ptr(textProjection));
