@@ -284,3 +284,16 @@ glm::vec3 Maths::hslToRGB(glm::vec3 hsl) {
 float Maths::clamp(float min, float max, float value) {
     return fmaxf(fminf(max, value), min);
 }
+
+float Maths::sqrMagnitude(const glm::vec4 &vector) {
+    return vector.x * vector.x + vector.y * vector.y + vector.z * vector.z + vector.w * vector.w;
+}
+
+glm::vec4 Maths::clamp(glm::vec4 min, glm::vec4 max, glm::vec4 value) {
+    return glm::vec4(
+        clamp(min.x, max.x, value.x),
+        clamp(min.y, max.y, value.y),
+        clamp(min.z, max.z, value.z),
+        clamp(min.w, max.w, value.w)
+    );
+}

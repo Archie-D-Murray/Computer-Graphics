@@ -33,7 +33,7 @@ float cameraTimer = 0.0f;
 float renderTimer = 0.0f;
 float areaTimer = 0.0f;
 
-enum Interaction { NONE, SPEED_INCREMENT, SPEED_DECREMENT, TEXTURE_INCREMENT, TEXTURE_DECREMENT };
+enum Interaction { NONE, SPEED_INCREMENT, SPEED_DECREMENT, DIFFUSE };
 
 bool canInteract = false;
 float objectSpeed = 0.5f;
@@ -43,15 +43,12 @@ float minSpeed = 0.125f;
 float objectProgress = 0.0f;
 float targetZ = -3.0f;
 int objectIndex = 0;
+glm::vec4 objectDiffuseSettings = glm::vec4(0.7f, 0.7f, 1.0f, 20.0f);
+glm::vec4 diffuseInput = glm::vec4(0);
+glm::vec4 minSettings = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+glm::vec4 maxSettings = glm::vec4(1.0f, 1.0f, 1.0f, 20.0f);
 Interaction interaction = NONE;
 
-struct ObjectTextureData {
-  std::string diffuse;
-  std::string normal;
-  std::string specular;
-};
-
-std::vector<Model*> objectModelAssets;
 const float width = 1260;
 const float height = 720;
 const float cameraSpeed = 0.075f;
@@ -260,24 +257,11 @@ int main(void) {
   teapot.addTexture("../assets/white.png", "normal");
   teapot.addTexture("../assets/white.png", "specular");
 
-  Model gold = Model("../assets/teapot.obj");
-  gold.addTexture("../assets/gold_diffuse.png", "diffuse");
-  gold.addTexture("../assets/gold_normal.png", "normal");
-  gold.addTexture("../assets/gold_specular.png", "specular");
-  gold.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
-  objectModelAssets.push_back(&gold);
   Model marble = Model("../assets/teapot.obj");
   marble.addTexture("../assets/marble_diffuse.png", "diffuse");
   marble.addTexture("../assets/marble_normal.png", "normal");
   marble.addTexture("../assets/marble_specular.png", "specular");
-  marble.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
-  objectModelAssets.push_back(&marble);
-  Model plaster = Model("../assets/teapot.obj");
-  plaster.addTexture("../assets/plaster_diffuse.png", "diffuse");
-  plaster.addTexture("../assets/plaster_normal.png", "normal");
-  plaster.addTexture("../assets/plaster_specular.png", "specular");
-  plaster.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
-  objectModelAssets.push_back(&plaster);
+  marble.setDiffusionParameters(objectDiffuseSettings);
 
   Model colliderDebug = Model("../assets/unit_cube.obj");
   colliderDebug.addTexture("../assets/white.png", "diffuse");
@@ -314,7 +298,7 @@ int main(void) {
   objects.push_back(Object(glm::vec3(0.0f, 6.0f, 0.0f), glm::vec3(2.0f),
                            Quaternion(M_PI, 0), "Ceiling", &ceiling));
 
-  objects.push_back(Object(glm::vec3(4, 0, 3), glm::vec3(1.0f), Quaternion(), "Object", objectModelAssets[objectIndex]));
+  objects.push_back(Object(glm::vec3(4, 0, 3), glm::vec3(1.0f), Quaternion(), "Object", &marble));
   Object* object = &objects.back();
 
   colliders.push_back(BoxCollider2D({0, 0, 0}, {1.0f, 1.0f})); // Centre Crate
@@ -415,9 +399,8 @@ int main(void) {
     const BoxCollider2D inputArea = BoxCollider2D(glm::vec3(3, 0, 0), glm::vec2(4, 10));
     canInteract = BoxCollider2D::isTouching(playerCollider, inputArea);
     if (canInteract) {
-      char buf[64];
-      sprintf(buf, "Speed %.2fx, Model: %d", objectSpeed / 0.5f, objectIndex);
-      textQueue.push_back(TextRenderData {std::string(buf), glm::ivec2(10, 500), 0.5f, glm::vec3(1.0f)});
+      char buf[72];
+      sprintf(buf, "Speed %.2fx, Diffuse Settings: ka, kd, ks, Ns: [ %.1f, %.1f, %.1f, %.1f ]", objectSpeed / 0.5f, objectDiffuseSettings.x, objectDiffuseSettings.y, objectDiffuseSettings.z, objectDiffuseSettings.w); textQueue.push_back(TextRenderData {std::string(buf), glm::ivec2(10, 500), 0.33f, glm::vec3(1.0f)});
     }
     if (canInteract && interaction != NONE) {
       switch (interaction) {
@@ -430,19 +413,12 @@ int main(void) {
         case SPEED_DECREMENT:
           objectSpeed = fmaxf(minSpeed, objectSpeed - objectIncrement);
           break;
-        case TEXTURE_INCREMENT:
-          objectIndex = ++objectIndex % objectModelAssets.size();
-          object->model = objectModelAssets[(size_t) objectIndex];
-          break;
-        case TEXTURE_DECREMENT:
-          objectIndex--;
-          if (objectIndex < 0) {
-            objectIndex = objectModelAssets.size() - 1;
-          }
-          object->model = objectModelAssets[(size_t) objectIndex];
+        case DIFFUSE:
+          objectDiffuseSettings = Maths::clamp(minSettings, maxSettings, objectDiffuseSettings + deltaTime * diffuseInput);
+          marble.setDiffusionParameters(objectDiffuseSettings);
           break;
       }
-      interaction = NONE; 
+      interaction = NONE;
     } else if (interaction != NONE) {
       interaction = NONE; 
     }
@@ -615,25 +591,24 @@ void keyboardInput(GLFWwindow *window) {
     camera = (CameraType)newCamera;
   }
 
-  if (!canInteract) { return; }
-  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && areaTimer <= 0.0f) {
+  if (!canInteract || areaTimer > 0.0f) { return; }
+  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
     areaTimer += 1.0f;
     interaction = SPEED_INCREMENT;
   }
 
-  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && areaTimer <= 0.0f) {
+  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
     areaTimer += 1.0f;
     interaction = SPEED_DECREMENT;
   }
 
-  if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS && areaTimer <= 0.0f) {
-    areaTimer += 1.0f;
-    interaction = TEXTURE_INCREMENT;
-  }
-
-  if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && areaTimer <= 0.0f) {
-    areaTimer += 1.0f;
-    interaction = TEXTURE_DECREMENT;
+  diffuseInput.x = int(glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) - int(glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS);
+  diffuseInput.y = int(glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) - int(glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS);
+  diffuseInput.z = int(glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) - int(glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS);
+  diffuseInput.w = int(glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) - int(glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS);
+  
+  if (Maths::sqrMagnitude(diffuseInput) > 0) {
+    interaction = DIFFUSE;
   }
 }
 

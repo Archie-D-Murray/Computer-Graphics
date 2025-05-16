@@ -42,6 +42,10 @@ namespace Maths {
     float smoothDamp(float value);
     float lerp(float min, float max, float t);
 
+    // Vector4 Maths
+    glm::vec4 clamp(glm::vec4 min, glm::vec4 max, glm::vec4 value);
+    float sqrMagnitude(const glm::vec4& vector);
+
     // Vector3 maths
     float magnitude(const glm::vec3& vector);
     float sqrMagnitude(const glm::vec3& vector);
