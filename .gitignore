@@ -3,3 +3,4 @@ build/
 .vs/
 assets/source_assets/
 .~lock.Self_assessment_document.docx#
+*.mp4
