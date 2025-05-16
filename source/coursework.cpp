@@ -1,15 +1,15 @@
 #include "glm/detail/type_vec.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include <glm/gtx/string_cast.hpp>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include <ft2build.h>
+#include <set>
 #include FT_FREETYPE_H
 
 #include <common/box_collider2d.hpp>
@@ -30,7 +30,28 @@ glm::vec2 movementInput;
 float lastFrame = 0.0f;
 float deltaTime = 0.0f;
 float cameraTimer = 0.0f;
+float renderTimer = 0.0f;
+float areaTimer = 0.0f;
 
+enum Interaction { NONE, SPEED_INCREMENT, SPEED_DECREMENT, TEXTURE_INCREMENT, TEXTURE_DECREMENT };
+
+bool canInteract = false;
+float objectSpeed = 0.5f;
+float objectIncrement = 0.125f;
+float maxSpeed = 1.0f;
+float minSpeed = 0.125f;
+float objectProgress = 0.0f;
+float targetZ = -3.0f;
+int objectIndex = 0;
+Interaction interaction = NONE;
+
+struct ObjectTextureData {
+  std::string diffuse;
+  std::string normal;
+  std::string specular;
+};
+
+std::vector<Model*> objectModelAssets;
 const float width = 1260;
 const float height = 720;
 const float cameraSpeed = 0.075f;
@@ -64,6 +85,7 @@ struct TextRenderData {
 };
 
 std::vector<TextRenderData> textQueue;
+bool collisionDebugRendering = false;
 
 // Function prototypes
 void keyboardInput(GLFWwindow *window);
@@ -124,7 +146,7 @@ int main(void) {
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   for (size_t i = 0; i < 128; i++) {
-    if (FT_Load_Char(font, i, FT_LOAD_RENDER)) {
+    if (FT_Load_Char(font, (FT_ULong) i, FT_LOAD_RENDER)) {
       std::cout << "Could not load character: " << (char)i << "\n";
       continue;
     }
@@ -186,67 +208,90 @@ int main(void) {
   uint32_t mvpID = glGetUniformLocation(shaderID, "MVP");
   uint32_t mvID = glGetUniformLocation(shaderID, "MV");
   uint32_t tintID = glGetUniformLocation(shaderID, "tint");
-  glUniform3fv(glGetUniformLocation(shaderID, "modelTint"), 1,
-               glm::value_ptr(glm::vec3(1.0f)));
+  glUniform3fv(glGetUniformLocation(shaderID, "modelTint"), 1, glm::value_ptr(glm::vec3(1.0f)));
 
   Light lights;
 
-  lights.addSpotLight(glm::vec3{0, 5, 0}, glm::vec3{1, 1, 0},
-                      glm::vec3{0.8f, 0.8f, 0.8f}, 1.0f, 0.1f, 0.02f,
-                      Maths::radians(45));
-  lights.addPointLight(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(1.0f, 1.0f, 1.0f),
-                       1.0f, 0.1f, 0.02f); // Only this works!!
+  lights.addDirectionalLight(glm::vec3(1.0, -1.0f, 0.0f), glm::vec3(0.8f, 1.0f, 0.8f));
+  lights.addSpotLight(glm::vec3{0, 3, 0}, glm::vec3{0.0f, -1, 0}, glm::vec3(0.8f, 0.8f, 1.0f), 1.0f, 0.1f, 0.02f, Maths::radians(45));
+  lights.addPointLight(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.1f, 0.5f, 0.5f), 1.0f, 0.1f, 0.02f);
 
   std::vector<BoxCollider2D> colliders;
   std::vector<Object> objects;
 
-  float hue = 0.0f;
+  float hue = 0.1f;
 
-  BoxCollider2D playerCollider =
-      BoxCollider2D(currentCamera().position, glm::vec2(0.25f));
+  BoxCollider2D playerCollider = BoxCollider2D(currentCamera().position, glm::vec2(0.5f));
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-  Model teapot = Model("../assets/teapot.obj");
-  teapot.addTexture("../assets/white.png", "diffuse");
-  teapot.addTexture("../assets/bricks_normal.png", "normal");
-  teapot.setDiffusionParameters(0.2f, 0.7f, 1.0f, 20.0f);
+  Model tux = Model("../assets/tux.obj");
+  tux.addTexture("../assets/onyx_diffuse.png", "diffuse");
+  tux.addTexture("../assets/onyx_normal.png", "normal");
+  tux.addTexture("../assets/onyx_specular.png", "specular");
+  tux.setDiffusionParameters(0.7f, 0.7f, 1.0f, 20.0f);
 
-  Model box = Model("../assets/cube.obj");
-  box.addTexture("../assets/crate.jpg", "diffuse");
-  box.addTexture("../assets/stones_normal.png", "normal");
-  box.addTexture("../assets/stones_specular.png", "specular");
-  box.setDiffusionParameters(0.5f, 0.5f, 0.5f, 5.0f);
+  Model box = Model("../assets/crate.obj");
+  box.addTexture("../assets/metal_diffuse.png", "diffuse");
+  box.addTexture("../assets/metal_normal.png", "normal");
+  box.addTexture("../assets/metal_specular.png", "specular");
+  box.setDiffusionParameters(0.5f, 0.5f, 0.5f, 20.0f);
 
   Model wall = Model("../assets/small_plane.obj");
   wall.addTexture("../assets/bricks_diffuse.png", "diffuse");
   wall.addTexture("../assets/bricks_normal.png", "normal");
   wall.addTexture("../assets/bricks_specular.png", "specular");
-  wall.setDiffusionParameters(0.2f, 0.7, 1.0f, 20.0f);
+  wall.setDiffusionParameters(0.1f, 0.7f, 1.0f, 20.0f);
 
   Model floor = Model("../assets/small_plane.obj");
-  floor.addTexture("../assets/stones_diffuse.png", "diffuse");
-  floor.addTexture("../assets/stones_normal.png", "normal");
-  floor.addTexture("../assets/stones_specular.png", "specular");
-  floor.setDiffusionParameters(0.2f, 0.7, 1.0f, 20.0f);
+  floor.addTexture("../assets/wood_diffuse.png", "diffuse");
+  floor.addTexture("../assets/wood_normal.png", "normal");
+  floor.addTexture("../assets/wood_specular.png", "specular");
+  floor.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
 
   Model ceiling = Model("../assets/small_plane.obj");
-  ceiling.addTexture("../assets/wood.png", "diffuse");
-  ceiling.addTexture("../assets/stones_normal.png", "normal");
-  ceiling.addTexture("../assets/stones_specular.png", "specular");
-  ceiling.setDiffusionParameters(0.2f, 0.7, 1.0f, 20.0f);
+  ceiling.addTexture("../assets/plaster_diffuse.png", "diffuse");
+  ceiling.addTexture("../assets/plaster_normal.png", "normal");
+  ceiling.addTexture("../assets/plaster_specular.png", "specular");
+  ceiling.setDiffusionParameters(0.2f, 0.7f, 1.0f, 20.0f);
+
+  Model teapot = Model("../assets/teapot.obj");
+  teapot.addTexture("../assets/white.png", "diffuse");
+  teapot.addTexture("../assets/white.png", "normal");
+  teapot.addTexture("../assets/white.png", "specular");
+
+  Model gold = Model("../assets/teapot.obj");
+  gold.addTexture("../assets/gold_diffuse.png", "diffuse");
+  gold.addTexture("../assets/gold_normal.png", "normal");
+  gold.addTexture("../assets/gold_specular.png", "specular");
+  gold.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
+  objectModelAssets.push_back(&gold);
+  Model marble = Model("../assets/teapot.obj");
+  marble.addTexture("../assets/marble_diffuse.png", "diffuse");
+  marble.addTexture("../assets/marble_normal.png", "normal");
+  marble.addTexture("../assets/marble_specular.png", "specular");
+  marble.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
+  objectModelAssets.push_back(&marble);
+  Model plaster = Model("../assets/teapot.obj");
+  plaster.addTexture("../assets/plaster_diffuse.png", "diffuse");
+  plaster.addTexture("../assets/plaster_normal.png", "normal");
+  plaster.addTexture("../assets/plaster_specular.png", "specular");
+  plaster.setDiffusionParameters(0.05f, 0.7f, 1.0f, 20.0f);
+  objectModelAssets.push_back(&plaster);
 
   Model colliderDebug = Model("../assets/unit_cube.obj");
   colliderDebug.addTexture("../assets/white.png", "diffuse");
+  colliderDebug.addTexture("../assets/white.png", "normal");
+  colliderDebug.addTexture("../assets/white.png", "specular");
 
   fprintf(stdout, "Loaded models\n");
 
-  objects.push_back(Object(glm::vec3{0, 0, 0}, glm::vec3{1, 1, 1} * 0.25f,
+  objects.push_back(Object(glm::vec3{0, 0, 0}, glm::vec3(0.01f),
                            Quaternion(), // Identity quaternion
-                           "Teapot", &teapot));
+                           "Tux", &tux));
 
-  objects.push_back(Object(glm::vec3{0, 0.125f, 0.f},
-                           glm::vec3(0.5f, 0.25f, 0.5f), Quaternion(), "Box",
+  objects.push_back(Object(glm::vec3{0, 0.0f, 0.f},
+                           glm::vec3(0.75f), Quaternion(), "Box",
                            &box));
 
   objects.push_back(Object(glm::vec3(5.0f, 2.5f, 0.0f), glm::vec3(2.0f),
@@ -269,11 +314,14 @@ int main(void) {
   objects.push_back(Object(glm::vec3(0.0f, 6.0f, 0.0f), glm::vec3(2.0f),
                            Quaternion(M_PI, 0), "Ceiling", &ceiling));
 
+  objects.push_back(Object(glm::vec3(4, 0, 3), glm::vec3(1.0f), Quaternion(), "Object", objectModelAssets[objectIndex]));
+  Object* object = &objects.back();
+
   colliders.push_back(BoxCollider2D({0, 0, 0}, {1.0f, 1.0f})); // Centre Crate
-  colliders.push_back(BoxCollider2D({0, 0, +5.5f}, {12, 1})); // South
-  colliders.push_back(BoxCollider2D({0, 0, -5.5f}, {12, 1})); // North
-  colliders.push_back(BoxCollider2D({+5.5f, 0, 0}, {1, 12})); // Right
-  colliders.push_back(BoxCollider2D({-5.5f, 0, 0}, {1, 12})); // Left
+  colliders.push_back(BoxCollider2D({0, 0, +5.5f}, {12, 1}));  // South
+  colliders.push_back(BoxCollider2D({0, 0, -5.5f}, {12, 1}));  // North
+  colliders.push_back(BoxCollider2D({+5.5f, 0, 0}, {1, 12}));  // Right
+  colliders.push_back(BoxCollider2D({-5.5f, 0, 0}, {1, 12}));  // Left
 
   cameras[FPS].lookAt(objects[0].position);
   cameras[NE].lookAt(glm::vec3(0.0f));
@@ -281,16 +329,14 @@ int main(void) {
   cameras[SW].lookAt(glm::vec3(0.0f));
   cameras[NW].lookAt(glm::vec3(0.0f));
   cameras[NW].lookAt(glm::vec3(0.0f));
-  cameras[NE].tint = glm::vec3(1.0f, 0.0f, 0.0f);
-  cameras[SE].tint = glm::vec3(0.0f, 1.0f, 0.0f);
-  cameras[SW].tint = glm::vec3(0.0f, 0.0f, 1.0f);
+  cameras[NE].tint = glm::vec3(1.0f, 0.5f, 0.5f);
+  cameras[SE].tint = glm::vec3(0.5f, 1.0f, 0.5f);
+  cameras[SW].tint = glm::vec3(0.5f, 0.5f, 1.0f);
   cameras[NW].tint = glm::vec3(1.0f, 1.0f, 0.0f);
 
   float acc = 0;
 
-  textQueue.push_back(TextRenderData{std::string("Not \na test"),
-                                     glm::ivec2(10, 50), 1.0,
-                                     glm::vec3(1.0f, 0.5f, 0.5f)});
+  textQueue.push_back(TextRenderData{ std::string("FPS: 0"), glm::vec2(10, 670), 1.0f, glm::vec3(1.0f, 1.0f, 0.0f) });
 
   while (!glfwWindowShouldClose(window)) {
     mouseDelta = {0.0f, 0.0f};
@@ -301,9 +347,15 @@ int main(void) {
     if (cameraTimer > 0) {
       cameraTimer -= deltaTime;
     }
+    if (renderTimer > 0) {
+      renderTimer -= deltaTime;
+    }
+    if (areaTimer > 0) {
+      areaTimer -= deltaTime;
+    }
 
     hue += deltaTime;
-    if (hue > 1) {
+    if (hue > 1.1f) {
       hue -= 1.0f;
     }
 
@@ -323,9 +375,6 @@ int main(void) {
       acc -= 1.0f;
       memset(buf, 0, bufLen * sizeof(char));
     }
-    char buf[32];
-    sprintf(buf, "Player Pos: [%.1f, %.1f]", cameras[FPS].position.x, cameras[FPS].position.z);
-    textQueue.push_back(TextRenderData { std::string(buf), glm::ivec2(10, 600), 1.0f, glm::vec3(1.0f) });
 
     // For my system this means mouse forward looks down, and mouse right looks
     // right
@@ -340,15 +389,14 @@ int main(void) {
       glm::vec3 moveDir3 = currentCamera().forward * movementInput.y +
                            currentCamera().right * movementInput.x;
       glm::vec2 moveDir = Maths::normalize(glm::vec2(moveDir3.x, moveDir3.z));
-      glm::vec2 playerPos = glm::vec2(currentCamera().position.x, currentCamera().position.z);
+      glm::vec2 playerPos =
+          glm::vec2(currentCamera().position.x, currentCamera().position.z);
       for (const BoxCollider2D &collider : colliders) {
-        glm::vec2 obstacleDir = Maths::normalize(collider.getClosestPoint(playerPos) - playerPos);
+        glm::vec2 obstacleDir =
+            Maths::normalize(collider.getClosestPoint(playerPos) - playerPos);
         if (BoxCollider2D::isTouching(playerCollider, collider)) {
           if (Maths::dot(obstacleDir, moveDir) > MIN_DOT_PRODUCT) {
             canMove = false;
-            char collisionData[256];
-            sprintf(collisionData, "Direction: %s, Move: %s, Pos: %s\nBox min, max: %s, %s", glm::to_string(obstacleDir).c_str(), glm::to_string(moveDir).c_str(), glm::to_string(currentCamera().position).c_str(), glm::to_string(glm::vec2(collider.left(), collider.back())).c_str(), glm::to_string(glm::vec2(collider.right(), collider.front())).c_str());
-            textQueue.push_back(TextRenderData { std::string(collisionData), {50, 550}, 0.25f, glm::vec3(1.0f)});
             break;
           }
         }
@@ -364,6 +412,50 @@ int main(void) {
       playerCollider.updatePosition(currentCamera().position);
     }
 
+    const BoxCollider2D inputArea = BoxCollider2D(glm::vec3(3, 0, 0), glm::vec2(4, 10));
+    canInteract = BoxCollider2D::isTouching(playerCollider, inputArea);
+    if (canInteract) {
+      char buf[64];
+      sprintf(buf, "Speed %.2fx, Model: %d", objectSpeed / 0.5f, objectIndex);
+      textQueue.push_back(TextRenderData {std::string(buf), glm::ivec2(10, 500), 0.5f, glm::vec3(1.0f)});
+    }
+    if (canInteract && interaction != NONE) {
+      switch (interaction) {
+        case NONE:
+          assert("UNREACHABLE");
+          break;
+        case SPEED_INCREMENT:
+          objectSpeed = fminf(maxSpeed, objectSpeed + objectIncrement);
+          break;
+        case SPEED_DECREMENT:
+          objectSpeed = fmaxf(minSpeed, objectSpeed - objectIncrement);
+          break;
+        case TEXTURE_INCREMENT:
+          objectIndex = ++objectIndex % objectModelAssets.size();
+          object->model = objectModelAssets[(size_t) objectIndex];
+          break;
+        case TEXTURE_DECREMENT:
+          objectIndex--;
+          if (objectIndex < 0) {
+            objectIndex = objectModelAssets.size() - 1;
+          }
+          object->model = objectModelAssets[(size_t) objectIndex];
+          break;
+      }
+      interaction = NONE; 
+    } else if (interaction != NONE) {
+      interaction = NONE; 
+    }
+
+    objectProgress = fminf(1.0f, objectProgress + deltaTime * objectSpeed);
+    if (objectProgress >= 1.0f) {
+      objectProgress = 0.0f;
+      targetZ *= -1.0f;
+    }
+
+    object->position = glm::vec3(object->position.x, 1.0f + 0.5f * sinf(time * M_PI * 0.25f), Maths::lerp(-targetZ, targetZ, Maths::smoothDamp(objectProgress)));
+    object->rotation = Quaternion(0, time * M_PI * 0.125f);
+
     glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_BLEND);
@@ -375,7 +467,8 @@ int main(void) {
 
     objects.front().tint = Maths::hslToRGB(glm::vec3(hue, 1, 0.75f));
     objects.front().rotation = Quaternion(0, time * M_PI);
-    objects.front().position = glm::vec3(0, sinf(time * M_PI) * 0.25f + 1.0f, 0);
+    objects.front().position =
+        glm::vec3(0, sinf(time * M_PI) * 0.25f + 1.0f, 0);
 
     for (Object &object : objects) {
       glm::mat4 model = object.modelMat();
@@ -389,26 +482,36 @@ int main(void) {
       object.draw(shaderID);
     }
 
-    for (BoxCollider2D& collider : colliders) {
-      glm::mat4 model = Maths::translate(collider.position) * glm::mat4(1.0f) * Maths::scale(glm::vec3(collider.size.x, 1, collider.size.y));
-      glm::mat4 mv = currentCamera().view * model;
-      glm::mat4 mvp = currentCamera().projection * mv;
+    if (collisionDebugRendering) {
+      for (BoxCollider2D &collider : colliders) {
+        glm::mat4 model = Maths::translate(collider.position) * Maths::scale(glm::vec3(collider.size.x, 1, collider.size.y) * 1.05f);
+        glm::mat4 mv = currentCamera().view * model;
+        glm::mat4 mvp = currentCamera().projection * mv;
 
-      glUniformMatrix4fv(mvpID, 1, GL_FALSE, glm::value_ptr(mvp));
-      glUniformMatrix4fv(mvID, 1, GL_FALSE, glm::value_ptr(mv));
+        glUniformMatrix4fv(mvpID, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniformMatrix4fv(mvID, 1, GL_FALSE, glm::value_ptr(mv));
 
-      colliderDebug.draw(shaderID);
+        colliderDebug.draw(shaderID);
+      }
     }
 
     if (camera != FPS) {
-      // TODO: Draw player when not in FPS
+        glm::mat4 model = Maths::translate(cameras[FPS].position) * Quaternion(0.0f, 0.5f * M_PI - cameras[FPS].yaw).matrix() * Maths::scale(glm::vec3(1.0f));
+        glm::mat4 mv = currentCamera().view * model;
+        glm::mat4 mvp = currentCamera().projection * mv;
+
+        glUniformMatrix4fv(mvpID, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniformMatrix4fv(mvID, 1, GL_FALSE, glm::value_ptr(mv));
+
+        teapot.draw(shaderID);
     }
 
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    const glm::mat4 textProjection = Maths::ortho(0.0f, width, 0.0f, height, 0.0f, 10.0f);
+    const glm::mat4 textProjection =
+        Maths::ortho(0.0f, width, 0.0f, height, 0.0f, 10.0f);
     glUseProgram(textShaderID);
     glUniformMatrix4fv(glGetUniformLocation(textShaderID, "projection"), 1,
                        GL_FALSE, glm::value_ptr(textProjection));
@@ -459,7 +562,18 @@ int main(void) {
     glfwPollEvents();
   }
 
-  teapot.deleteBuffers();
+  std::set<Model*> models;
+  for (Object& object : objects) {
+    models.insert(object.model);
+  }
+  for (Model* model : models) {
+    model->deleteBuffers();
+  }
+  for (Character& ch : characters) {
+    glDeleteTextures(1, &ch.textureID);
+  }
+  glDeleteBuffers(1, &textVAO);
+  glDeleteBuffers(1, &textVBO);
   glDeleteProgram(shaderID);
   glfwTerminate();
 }
@@ -487,6 +601,11 @@ void keyboardInput(GLFWwindow *window) {
     camera = (CameraType)((camera + 1) % CAMERA_COUNT);
   }
 
+  if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && renderTimer <= 0.0f) {
+    collisionDebugRendering = !collisionDebugRendering;
+    renderTimer += 1.0f;
+  }
+
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && cameraTimer <= 0.0f) {
     cameraTimer += cameraDelay;
     int newCamera = camera - 1;
@@ -494,6 +613,27 @@ void keyboardInput(GLFWwindow *window) {
       newCamera = CAMERA_COUNT - 1;
     }
     camera = (CameraType)newCamera;
+  }
+
+  if (!canInteract) { return; }
+  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && areaTimer <= 0.0f) {
+    areaTimer += 1.0f;
+    interaction = SPEED_INCREMENT;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && areaTimer <= 0.0f) {
+    areaTimer += 1.0f;
+    interaction = SPEED_DECREMENT;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS && areaTimer <= 0.0f) {
+    areaTimer += 1.0f;
+    interaction = TEXTURE_INCREMENT;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && areaTimer <= 0.0f) {
+    areaTimer += 1.0f;
+    interaction = TEXTURE_DECREMENT;
   }
 }
 

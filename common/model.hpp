@@ -23,7 +23,6 @@ public:
     std::vector<glm::vec3> bitangents;
     std::vector<glm::vec3> tangents;
     std::vector<Texture>   textures;
-    unsigned int textureID;
     float ka = 0.8f, kd, ks, Ns = 20.0f;
     
     // Constructor
@@ -34,6 +33,7 @@ public:
     
     // Add textures
     void addTexture(const char *path, const char* type);
+    void setTexture(const char* path, const char* type);
     
     // Cleanup
     void deleteBuffers();

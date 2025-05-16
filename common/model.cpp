@@ -237,6 +237,15 @@ void Model::addTexture(const char *path, const char* type)
     std::cout << "Added texture: " << path << "\n";
 }
 
+void Model::setTexture(const char* path, const char* type) {
+    for (Texture& texture : textures) {
+        if (strcmp(texture.type.c_str(), type) == 0) {
+            glDeleteTextures(1, &texture.id);
+            texture.id = loadTexture(path);
+        }
+    }
+}
+
 unsigned int Model::loadTexture(const char *path)
 {
 

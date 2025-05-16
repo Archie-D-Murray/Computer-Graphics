@@ -11,6 +11,9 @@ endif()
 # Compile external dependencies 
 add_subdirectory (external)
 
+if(WIN32) # MSVC is the worst compiler ever to exist
+	add_definitions("/wd4244") # glm::vec2 to float conversions
+endif()
 # On Visual 2005 and above, this module can set the debug working directory
 cmake_policy(SET CMP0026 OLD)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/external/rpavlik-cmake-modules-fe2273")

@@ -143,6 +143,14 @@ float Maths::roll(const glm::vec3& angles) {
     return angles.z;
 }
 
+float Maths::smoothDamp(float value) {
+    value = clamp(0, 1, value);
+    return 0.5f + 0.5f * (sin(M_PI * 1.0f * value - 0.5f * M_PI));
+}
+float Maths::lerp(float min, float max, float t) {
+    return min * (1 - t) + max * t;
+}
+
 glm::mat4 Maths::lookAt(glm::vec3 position, glm::vec3 target, glm::vec3 worldUp) {
     glm::mat4 view = glm::mat4(1.0f);
     glm::vec3 forward = glm::normalize(target - position);

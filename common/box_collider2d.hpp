@@ -4,7 +4,7 @@
 #include <glm/vec2.hpp>
 #include <iostream>
 
-constexpr float MIN_DOT_PRODUCT = 0.5f;
+constexpr float MIN_DOT_PRODUCT = 0.4f;
 
 class BoxCollider2D {
 public:

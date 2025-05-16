@@ -4,7 +4,7 @@ echo CMake failed
 exit
 
 :cmake_build
-cmake --build build/
+cmake --build build/ -- /nowarn:MSB8028
 if %ERRORLEVEL% == 0 goto run_exe
 echo Build failed
 exit
