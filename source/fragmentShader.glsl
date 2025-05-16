@@ -37,13 +37,11 @@ uniform Light lightSources[maxLights];
 uniform vec3 tint;
 
 // Function prototypes
-vec3 pointLight(vec3 lightPosition, vec3 lightColour,
-    float constant, float linear, float quadratic);
+vec3 pointLight(int i);
 
-vec3 spotLight(vec3 lightPosition, vec3 direction, vec3 lightColour,
-    float cosPhi, float constant, float linear, float quadratic);
+vec3 spotLight(int i);
 
-vec3 directionalLight(vec3 lightDirection, vec3 lightColour);
+vec3 directionalLight(int i);
 
 // Get the normal vector from the normal map
 vec3 Normal = normalize(2.0 * vec3(texture(normalMap, UV)) - 1.0);
@@ -61,23 +59,21 @@ void main() {
 
         // Calculate point light
         if (lightSources[i].type == 1)
-            fragmentColour += pointLight(lightPosition, lightColour,
-                    constant, linear, quadratic);
+            fragmentColour += pointLight(i);
 
         // Calculate spotlight
         if (lightSources[i].type == 2)
-            fragmentColour += spotLight(lightPosition, lightDirection, lightColour,
-                    cosPhi, constant, linear, quadratic);
+            fragmentColour += spotLight(i);
 
         // Calculate directional light
         if (lightSources[i].type == 3)
-            fragmentColour += directionalLight(lightDirection, lightColour);
+            fragmentColour += directionalLight(i);
     }
     fragmentColour *= tint * modelTint;
 }
 
 // Calculate point light
-vec3 pointLight(vec3 lightPosition, vec3 lightColour, float constant, float linear, float quadratic) {
+vec3 pointLight(int i) {
     // Object colour
     vec3 objectColour = vec3(texture(diffuseMap, UV));
 
@@ -85,29 +81,29 @@ vec3 pointLight(vec3 lightPosition, vec3 lightColour, float constant, float line
     vec3 ambient = ka * objectColour;
 
     // Diffuse reflection
-    vec3 light = normalize(lightPosition - fragmentPosition);
+    vec3 light = normalize(tangentSpaceLightPosition[i] - fragmentPosition);
     vec3 normal = normalize(Normal);
     float cosTheta = max(dot(normal, light), 0);
-    vec3 diffuse = kd * lightColour * objectColour * cosTheta;
+    vec3 diffuse = kd * lightSources[i].colour * objectColour * cosTheta;
 
     // Specular reflection
     vec3 reflection = -light + 2 * dot(light, normal) * normal;
     vec3 camera = normalize(-fragmentPosition);
     float cosAlpha = max(dot(camera, reflection), 0);
-    vec3 specular = ks * lightColour * pow(cosAlpha, Ns);
+    vec3 specular = ks * lightSources[i].colour * pow(cosAlpha, Ns);
     specular *= vec3(texture(specularMap, UV));
 
     // Attenuation
-    float distance = length(lightPosition - fragmentPosition);
-    float attenuation = 1.0 / (constant + linear * distance +
-                quadratic * distance * distance);
+    float distance = length(tangentSpaceLightPosition[i] - fragmentPosition);
+    float attenuation = 1.0 / (lightSources[i].constant + lightSources[i].linear * distance +
+                lightSources[i].quadratic * distance * distance);
 
     // Fragment colour
     return (ambient + diffuse + specular) * attenuation;
 }
 
 // Calculate spotlight
-vec3 spotLight(vec3 lightPosition, vec3 lightDirection, vec3 lightColour, float cosPhi, float constant, float linear, float quadratic) {
+vec3 spotLight(int i) {
     // Object colour
     vec3 objectColour = vec3(texture(diffuseMap, UV));
 
@@ -115,35 +111,35 @@ vec3 spotLight(vec3 lightPosition, vec3 lightDirection, vec3 lightColour, float 
     vec3 ambient = ka * objectColour;
 
     // Diffuse reflection
-    vec3 light = normalize(lightPosition - fragmentPosition);
+    vec3 light = normalize(tangentSpaceLightPosition[i] - fragmentPosition);
     vec3 normal = normalize(Normal);
     float cosTheta = max(dot(normal, light), 0);
-    vec3 diffuse = kd * lightColour * objectColour * cosTheta;
+    vec3 diffuse = kd * lightSources[i].colour * objectColour * cosTheta;
 
     // Specular reflection
     vec3 reflection = -light + 2 * dot(light, normal) * normal;
     vec3 camera = normalize(-fragmentPosition);
     float cosAlpha = max(dot(camera, reflection), 0);
-    vec3 specular = ks * lightColour * pow(cosAlpha, Ns);
+    vec3 specular = ks * lightSources[i].colour * pow(cosAlpha, Ns);
     specular *= vec3(texture(specularMap, UV));
 
     // Attenuation
-    float distance = length(lightPosition - fragmentPosition);
-    float attenuation = 1.0 / (constant + linear * distance +
-                quadratic * distance * distance);
+    float distance = length(tangentSpaceLightPosition[i] - fragmentPosition);
+    float attenuation = 1.0 / (lightSources[i].constant + lightSources[i].linear * distance +
+                lightSources[i].quadratic * distance * distance);
 
     // Directional light intensity
-    vec3 direction = normalize(lightDirection);
+    vec3 direction = normalize(tangentSpaceLightDirection[i]);
     cosTheta = dot(-light, direction);
     float delta = radians(2.0);
-    float intensity = clamp((cosTheta - cosPhi) / delta, 0.0, 1.0);
+    float intensity = clamp((cosTheta - lightSources[i].cosPhi) / delta, 0.0, 1.0);
 
     // Return fragment colour
     return (ambient + diffuse + specular) * attenuation * intensity;
 }
 
 // Calculate directional light
-vec3 directionalLight(vec3 lightDirection, vec3 lightColour) {
+vec3 directionalLight(int i) {
     // Object colour
     vec3 objectColour = vec3(texture(diffuseMap, UV));
 
@@ -151,16 +147,16 @@ vec3 directionalLight(vec3 lightDirection, vec3 lightColour) {
     vec3 ambient = ka * objectColour;
 
     // Diffuse reflection
-    vec3 light = normalize(-lightDirection);
+    vec3 light = normalize(-tangentSpaceLightDirection[i]);
     vec3 normal = normalize(Normal);
     float cosTheta = max(dot(normal, light), 0);
-    vec3 diffuse = kd * lightColour * objectColour * cosTheta;
+    vec3 diffuse = kd * lightSources[i].colour * objectColour * cosTheta;
 
     // Specular reflection
     vec3 reflection = -light + 2 * dot(light, normal) * normal;
     vec3 camera = normalize(-fragmentPosition);
     float cosAlpha = max(dot(camera, reflection), 0);
-    vec3 specular = ks * lightColour * pow(cosAlpha, Ns);
+    vec3 specular = ks * lightSources[i].colour * pow(cosAlpha, Ns);
     specular *= vec3(texture(specularMap, UV));
 
     // Return fragment colour
